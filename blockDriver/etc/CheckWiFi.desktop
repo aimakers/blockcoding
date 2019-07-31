@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Check WiFi
+Comment=Check that the Genie Kit Audio Wi-Fi is working
+Path=/home/pi/.genie-kit/bin
+Exec=sh /home/pi/.genie-kit/bin/CheckWiFi.sh
+Icon=/home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/etc/wifi.ico
+Terminal=true

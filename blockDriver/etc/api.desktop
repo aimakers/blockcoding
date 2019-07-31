@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Check Audio
+Comment=Check that the Genie Kit Audio Input/Output are both working
+Path=/home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver
+Exec=sh /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/API_keygen.sh
+Icon=/home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/etc/key.ico
+Terminal=true
+Name[ko_KR]=API 키발급
+X-KeepTerminal=true
+Comment[ko_KR]=API 키발급
