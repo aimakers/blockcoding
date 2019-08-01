@@ -13,5 +13,5 @@ else
    echo "API Key가 이미 발급 되어 있습니다. ";
 fi
 
-setsid /usr/bin/chromium-browser --profile-directory=Default http://aimakers.kt.co.kr/  > /dev/null 2>&1 &
+setsid /usr/bin/chromium-browser --profile-directory=Default https://genieblock.kt.co.kr/  > /dev/null 2>&1 &
 node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/blockDriver.js
