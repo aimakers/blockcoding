@@ -1,0 +1,13 @@
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Version=1.0
+Terminal=true
+Type=Application
+Name=블록드라이버 업데이트
+Exec=sudo /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/check-update.sh
+Icon=/home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/etc/update.ico
+StartupWMClass=crx_nhknbmmkmljkahpjnfhijapcegfdhfbc
+Name[ko_KR]=블록 드라이버 업데이트
+Path=/home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/
+
