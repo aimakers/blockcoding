@@ -16,6 +16,7 @@ var filePath = process.argv[2];
     const browser = await puppeteer.launch({
         headless : true,
         devtools: false,
+        ignoreHTTPSErrors: true,
         // 윈도우 크롬 자동 설치시 설치되는 경로
         executablePath : "/usr/bin/chromium-browser",
         // 실행될 브라우저의 화면 크기를 지정한다.
@@ -34,7 +35,7 @@ var filePath = process.argv[2];
                 browser.close();
             }
         });
-        await page.goto('http://125.159.61.195:40090/block',{waitUntil: 'load', timeout: 0});
+        await page.goto('https://genieblock.kt.co.kr/block',{waitUntil: 'load', timeout: 0});
         
         console.log("prepare autorun");
         await page.evaluate(function() {
