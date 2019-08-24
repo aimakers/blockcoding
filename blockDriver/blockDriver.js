@@ -284,7 +284,7 @@ function startStt(){
 	var stt_data = null;
 	ktstt.on('error',(error)=>{
 		console.log('Error:'+error);
-		io.sockets.emit("receiveData",{Type:"ktaimk_stt_detect",Data:"Error: 알 수 없는 이유로 Stt기능을 사용하지 못하였습니다.(예:사용량 초과,인터넷 연결 불량)"});
+		io.sockets.emit("receiveData",{Type:"ktaimk_stt_detect",Data:""});
 	});
 	ktstt.on('data',(data)=>{
 		console.log('stt result:'+JSON.stringify(data));
