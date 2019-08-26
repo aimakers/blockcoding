@@ -292,7 +292,11 @@ function startStt(){
 		if(data.resultCd!==200) mode=2;
 	});
 	ktstt.on('end',()=>{
-		console.log('stt text stream end');
+        console.log('stt text stream end');
+        if(stt_data == null)
+        {
+            stt_data = "";
+        }
 		io.sockets.emit("receiveData",{Type:"ktaimk_stt_detect",Data:stt_data});
 		mode=0;
 	});
