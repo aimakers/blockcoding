@@ -3,18 +3,35 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-# 	KT AMK Volumn Controller
-# 	Made By PHJ
-# 	Date: 2019.07.08
+#	KT AMK volume Controller
+#	Made By PHJ
+#	Date: 2019.07.08 (Modified Version:2019.08.05)
 # =============================================================================
 
 from tkinter import *
-import time, os, signal, glob, subprocess, multiprocessing
+import time, os, signal, glob, subprocess, multiprocessing, pyaudio, audioop, wave
 from multiprocessing import Process, Queue, Lock
 from subprocess import check_output
 
+
 top = Tk()
-top.title('KT AI MAKERS KIT Volumn Controller')
+top.title('KT AI MAKERS KIT volume Controller')
+
+### Define volume Scale ###
+VOL_LEV_1 = '0x4e'
+VOL_LEV_2 = '0x3e'
+VOL_LEV_3 = '0x30'
+VOL_LEV_4 = '0x2e'
+VOL_LEV_5 = '0x20'
+###########################
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 16000
+CHUNK = 512
+###########################
+hex_volume = '0x4e'
+
+
 
 # Gets the requested values of the height and widht.
 windowWidth = top.winfo_reqwidth()
@@ -29,10 +46,24 @@ positionDown = int(top.winfo_screenheight()/2 - windowHeight/2)
 top.geometry("+{}+{}".format(positionRight, positionDown))
 
 # =============================================================================
-# Volumn Control Functions
-# Volumn Control Functions
-# Volumn Control Functions
+# volume Control Functions
+# volume Control Functions
+# volume Control Functions
 # =============================================================================
+
+def read_vol_info():
+	r = open('volume_info.txt', mode='rt', encoding='utf-8')
+	vv = r.readlines()
+	print(vv[0])
+	vol_panel.set(int(vv[0]))
+	r.close()
+
+def write_vol_info():
+	global volume
+	f = open('volume_info.txt', mode='wt', encoding='utf-8')
+	f.write((str(volume)))
+	print(volume)
+	f.close()
 
 def write_to_reg(vv):
 	filename = '/home/pi/.genie-kit/bin/SPK-AD82011-Init.py'
@@ -53,9 +84,11 @@ def quit_fun(event):
 	top.quit()
 
 def confirm_fun(event):
-	global hex_volumn
-	write_to_reg(hex_volumn)
+	global hex_volume
+	write_to_reg(hex_volume)
 	subprocess.call(['python', 'SPK-AD82011-Init.py'], cwd='/home/pi/.genie-kit/bin')
+	play_file("./sample_sound.wav")
+	write_vol_info()
 
 # =============================================================================
 # Create buttons
@@ -77,22 +110,58 @@ Btn3.bind('<ButtonRelease-1>', confirm_fun)
 Btn4.bind('<ButtonRelease-1>', quit_fun)
 
 
-def changeVolumn(ev=None):
-	global volumn
-	global hex_volumn
+def changevolume(ev=None):
+	global volume
+	global hex_volume
 	min = 78
 	max = 32
-	volumn = vol_panel.get()
-	adj_val = int(volumn/3)
-	hex_volumn = hex(min - adj_val)
-	hex_volumn = str(hex_volumn)
+	volume = vol_panel.get()
+	if volume == 1:
+		hex_volume = VOL_LEV_1
+	elif volume == 2:
+		hex_volume = VOL_LEV_2
+	elif volume == 3:
+		hex_volume = VOL_LEV_3
+	elif volume == 4:
+		hex_volume = VOL_LEV_4
+	elif volume == 5:
+		hex_volume = VOL_LEV_5
+	else:
+		print("Out of Range...")
+		hex_volume = '0x3e'
+
+def play_file(fname):
+	# create an audio object
+	wf = wave.open(fname, 'rb')
+	p = pyaudio.PyAudio()
+	chunk = 1024
+
+	# open stream based on the wave object which has been input.
+	stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+					channels=wf.getnchannels(),
+					rate=wf.getframerate(),
+					output=True)
+
+	# read data (based on the chunk size)
+	data = wf.readframes(chunk)
+
+	# play stream (looping from beginning of file to the end)
+	while len(data) > 0:
+		# writing to the stream is what *actually* plays the sound.
+		stream.write(data)
+		data = wf.readframes(chunk)
+
+		# cleanup stuff.
+	stream.close()
+	p.terminate()
 
 
-label = Label(top, text='AMK 단말 볼륨 조절 (0 - 100)', font = ("맑은 고딕",15), fg='red')
+label = Label(top, text='AMK 단말 볼륨 조절 (1~5 단계)', font = ("맑은 고딕",15), fg='red')
 label.grid(row=2, column=5, columnspan=8)
-vol_panel = Scale(top, from_=0, to=100, orient=HORIZONTAL, command=changeVolumn, length=250)
-vol_panel.set(50)
+vol_panel = Scale(top, from_=1, to=5, orient=HORIZONTAL, command=changevolume, length=200)
+vol_panel.set(1)
 vol_panel.grid(row=6, column=5, ipadx=50, padx=50, rowspan=5, columnspan=5)
+read_vol_info()
 
 
 def main():
