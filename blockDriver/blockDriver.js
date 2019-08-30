@@ -290,13 +290,23 @@ function startStt(){
 		console.log('stt result:'+JSON.stringify(data));
 		stt_data = data;
 		if(data.resultCd!==200) mode=2;
+		if(data.resultCd == 509 ){
+			console.log('resOptions resultCd == 509 License limit exceeded');
+			io.sockets.emit("receiveData",{Type:"ktaimk_stt_detect",Data:""});
+			io.sockets.emit("receiveData",{Type:"ktaimk_license_limit",Data:""});
+			return;
+		}
 	});
 	ktstt.on('end',()=>{
         console.log('stt text stream end');
         if(stt_data == null)
         {
             stt_data = "";
-        }
+		}
+		if(stt_data.resultCd == 509 ){
+			mode=0;
+			return;
+		}
 		io.sockets.emit("receiveData",{Type:"ktaimk_stt_detect",Data:stt_data});
 		mode=0;
 	});
@@ -308,9 +318,7 @@ function startText2Voice(str,isDSS = false){
 	var kttts=aikit.getText2VoiceStream({text:str,lang:0,mode:0});
 	kttts.on('error',(error)=>{
 		console.log('Error:'+error);
-		setTimeout(function(){
-			startText2Voice(str,isDSS);
-		},100);
+		io.sockets.emit("receiveData",{Type:"ktaimk_tts_finished",Data:str});
 	});
 	kttts.on('data',(data)=>{
         if(data.streamingResponse==='resOptions' && data.resOptions.resultCd===200) console.log('Stream send. format:'+data.resOptions.format);
@@ -337,6 +345,18 @@ function startText2Voice(str,isDSS = false){
 						io.sockets.emit("receiveData",{Type:"ktaimk_dss_finished",Data:str});
 					}
 				}
+				if(data["resOptions"]["resultCd"] == 509 ){
+					console.log('resOptions resultCd == 509 License limit exceeded');
+					if(isDSS === false)
+					{
+						io.sockets.emit("receiveData",{Type:"ktaimk_license_limit",Data:""});
+						io.sockets.emit("receiveData",{Type:"ktaimk_tts_finished",Data:str});
+					} else {
+						io.sockets.emit("receiveData",{Type:"ktaimk_license_limit",Data:""});
+						io.sockets.emit("receiveData",{Type:"ktaimk_dss_finished",Data:str});
+					}
+
+				}
 			}
 	});
 	kttts.on('end',()=>{
@@ -349,15 +369,19 @@ function startQueryVoice(){
 		mode=0; // mic idle mode;
 		if(err){
 			console.log(JSON.stringify(err));
-			setTimeout(function(){
-				startQueryVoice();
-			},100);
+			io.sockets.emit("receiveData",{Type:"ktaimk_dss_finished",Data:str});
 
 		} else {
 			console.log("QueryVoice Msg:"+JSON.stringify(msg));
 			const action = msg.action[0];
 			const uword = msg.uword;
-
+			if(msg.resultCd == 509 ){
+				console.log('resOptions resultCd == 509 License limit exceeded');
+				io.sockets.emit("receiveData",{Type:"ktaimk_dss_finished",Data:""});
+				io.sockets.emit("receiveData",{Type:"ktaimk_license_limit",Data:""});
+				return;
+			
+			}
 			if(action)
 			{
 				let reqMsgStr = action.mesg;
