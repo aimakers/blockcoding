@@ -13,7 +13,7 @@ if pip list --format=legacy | grep "speedtest" > /dev/null; then
 else
 	echo ""
 	echo "속도 측정 필수 패키지가 설치되지 않아 설치를 시작합니다."
-	pip install speedtest-cli
+	sudo pip install speedtest-cli
 	echo "속도 측정 필수 패키지 설치를 완료하였습니다."
 	echo "사전 환경 점검 툴로 이동합니다. 엔터키를 쳐 주세요."
 fi
