@@ -226,6 +226,16 @@ io.sockets.on('connection', function(socket) {
 					console.log(error);
 				});
 			}
+			if(msg.type == "bh1750")
+			{
+				var exec = require('child_process').exec;
+				cmd = "python ./bh1750.py";
+				exec(cmd,function(error, stdout, stderr) {
+					if(!stderr){
+						socket.emit("receiveData",{Type:"ktaimk_get_bh1750_data",Data:{ret:true,data:stdout}});
+					}
+				});
+			}
 		})
 });
 
