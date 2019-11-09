@@ -60,7 +60,8 @@ def readLight(addr=DEVICE):
 
 def main():
 
-  
+  readLight()
+  time.sleep(0.5)
   lightLevel=readLight()
   #print("Light Level : " + format(lightLevel,'.2f') + " lx")
   print(format(lightLevel,'.2f'))
