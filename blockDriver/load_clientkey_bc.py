@@ -14,8 +14,14 @@ headers = {
     'cache-control': "no-cache"
     }
 
-response = requests.request("POST", url, data=body, headers=headers)
+try:
+    response = requests.request("POST", url, data=body, headers=headers)
+except requests.exceptions.RequestException:
+    print ("네트워크가 연결 되어 있지 않습니다. 다시 한번 시도해 주세요.")
+    exit(1)
+
 response_text = response.text
+## print(response_text)
 key1 = json.loads(response_text)
 key2 = key1["data"]["data"]
 ### print json.dumps(key2)
