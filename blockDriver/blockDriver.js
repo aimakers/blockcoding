@@ -1,4 +1,4 @@
-const record=require('node-record-lpcm16');
+const record=require('node-record-lpcm16'); 
 const aikit=require('./aimakerskitutil');
 const gpio=require('rpi-gpio');
 const pIDFinder = require('find-process');
@@ -448,7 +448,7 @@ app.post('/upload', upload.single('file'), function(req, res, next) {
 			io.sockets.emit('update_complete', "");
 			//aikit.initializeJson(json_path,cert_path,proto_path);
     });
-})
+});
 
 app.get("/test",function(req,res){
 	res.status(200).send("express test");
