@@ -1,4 +1,4 @@
-const record=require('node-record-lpcm16'); 
+const record=require('node-record-lpcm16');
 const aikit=require('./aimakerskitutil');
 const gpio=require('rpi-gpio');
 const pIDFinder = require('find-process');
@@ -239,6 +239,90 @@ io.sockets.on('connection', function(socket) {
 					}
 				});
 			}
+			if(msg.type == "dmr")
+			{
+				l1 = msg.data['l1'];
+				r1 = msg.data['r1'];
+				l2 = msg.data['l2'];
+				r2 = msg.data['r2'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./dcmotorspeed.py "+l1+" "+r1+" "+l2+" "+r2;
+				exec(cmd,function(error, stdout, stderr) {
+
+				});
+			}
+			if(msg.type == "dmstop")
+			{
+				
+				var exec = require('child_process').exec;
+				cmd = "python ./dcmotorstop.py";
+				exec(cmd,function(error, stdout, stderr) {
+
+				});
+			}
+			if(msg.type == "dma")
+			{
+				pin = msg.data['pin'];
+				angel = msg.data['angel'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./servomotor_angle.py "+pin+" "+angel;
+				exec(cmd,function(error, stdout, stderr) {
+
+				});
+			}
+			if(msg.type == "setHumanoidMotion")
+			{
+				data = msg.data['data'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./setHumanoidMotion.py "+data;
+				exec(cmd,function(error, stdout, stderr) {
+
+				});
+			}
+			if(msg.type == "digitalWrite2")
+			{
+				port = msg.data['port'];
+				data = msg.data['data'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./digitalWrite2.py "+port+" "+data;
+				exec(cmd,function(error, stdout, stderr) {
+
+				});
+			}
+			if(msg.type == "analogRead")
+			{
+				data = msg.data['data'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./analogRead.py "+data;
+				exec(cmd,function(error, stdout, stderr) {
+					if(!stderr){
+						socket.emit("receiveData",{Type:"ktaimk_get_analogRead",Data:{ret:true,data:stdout}});
+					}
+					else{
+						socket.emit("receiveData",{Type:"ktaimk_get_analogRead",Data:{ret:true,data:-1}});
+					}
+				});
+			}
+			if(msg.type == "digitalRead")
+			{
+				data = msg.data['data'];
+
+				var exec = require('child_process').exec;
+				cmd = "python ./digitalRead.py "+data;
+				exec(cmd,function(error, stdout, stderr) {
+					if(!stderr){
+						socket.emit("receiveData",{Type:"ktaimk_get_digitalRead",Data:{ret:true,data:stdout}});
+					}
+					else{
+						socket.emit("receiveData",{Type:"ktaimk_get_digitalRead",Data:{ret:true,data:-1}});
+					}
+				});
+			}
 		})
 });
 
@@ -448,7 +532,7 @@ app.post('/upload', upload.single('file'), function(req, res, next) {
 			io.sockets.emit('update_complete', "");
 			//aikit.initializeJson(json_path,cert_path,proto_path);
     });
-});
+})
 
 app.get("/test",function(req,res){
 	res.status(200).send("express test");
