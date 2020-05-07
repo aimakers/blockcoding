@@ -42,7 +42,6 @@ const client_id='';
 const client_key='';
 const client_secret='';
 const json_path='./key/clientKey.json';
-const cert_path='../data/ca-bundle.pem';
 const proto_path='../data/gigagenieRPC.proto';
 
 const kwstext=['기가지니','지니야','친구야','자기야'];
@@ -65,7 +64,7 @@ var hasKey = false;
 if (fs.existsSync(json_path)) {
     // Do something
 	hasKey = true;
-	aikit.initializeJson(json_path,cert_path,proto_path);
+	aikit.initializeJson(json_path, proto_path);
 }
 else{
 	// 브라우저에 알림 처리
