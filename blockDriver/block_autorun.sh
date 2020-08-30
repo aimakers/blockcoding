@@ -11,5 +11,6 @@ if [ ! -f "$1" ]; then
   exit 1
 fi
 kill -9 $(ps aux | grep 'phantomjs' | awk 'NR==1{print $2}')
-setsid node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/p_autorun.js "$1" &
-node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/blockDriver.js --autorun
+node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/p_autorun.js "$1" &
+#setsid node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/p_autorun.js "$1" &
+#node /home/pi/blockcoding/kt_ai_makers_kit_block_coding_driver/blockDriver/blockDriver.js --autorun

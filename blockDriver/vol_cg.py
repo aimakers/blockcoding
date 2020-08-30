@@ -66,7 +66,7 @@ def write_vol_info():
 	f.close()
 
 def write_to_reg(vv):
-	filename = '/home/pi/.genie-kit/bin/SPK-AD82011-Init.py'
+	filename = '/home/pi/.aicodingblock/bin/SPK-AD82011-Init.py'
 	file = open(filename, 'r', encoding="utf8")
 	text_str = file.read()
 	file.close()
@@ -75,7 +75,7 @@ def write_to_reg(vv):
 	change_str = '[0x03, ' + vv + '],'
 	replace_str="".join((text_str[:index], change_str, text_str[index+13:]))
 
-	file1 = open("/home/pi/.genie-kit/bin/SPK-AD82011-Init.py", "w")#write mode 
+	file1 = open("/home/pi/.aicodingblock/bin/SPK-AD82011-Init.py", "w")#write mode 
 	for line in replace_str:
 		file1.write(line)
 	file1.close()
@@ -86,7 +86,7 @@ def quit_fun(event):
 def confirm_fun(event):
 	global hex_volume
 	write_to_reg(hex_volume)
-	subprocess.call(['python', 'SPK-AD82011-Init.py'], cwd='/home/pi/.genie-kit/bin')
+	subprocess.call(['python', 'SPK-AD82011-Init.py'], cwd='/home/pi/.aicodingblock/bin')
 	play_file("./sample_sound.wav")
 	write_vol_info()
 

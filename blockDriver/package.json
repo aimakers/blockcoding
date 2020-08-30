@@ -13,12 +13,12 @@
     "node-dht-sensor": "^0.3.0",
     "node-record-lpcm16": "0.3.0",
     "pi-servo": "^1.0.2",
+    "puppeteer-core": "^1.11.0",
     "rpi-gpio": "1.0.0",
     "rpio": "0.9.21",
     "socket.io": "^2.1.1",
     "speaker": "0.4.1",
     "wav": "^1.0.2",
-    "youtube-dl": "1.12.2",
-    "puppeteer-core": "1.11.0"
+    "youtube-dl": "1.12.2"
   }
 }

@@ -24,7 +24,7 @@ def dcMotorSpeed(L1, R1, L2, R2):
 	if L1 < 0 : L1= 256+L1
 	if L2 < 0 : L2= 256+L2
 	if R1 < 0 : R1= 256+R1
-	if R1 < 0 : R2= 256+R2
+	if R2 < 0 : R2= 256+R2
 #  print 'MotorSpeed : L1:',L1, ',R1:', R1, ', L2:', L2, ',R2:', R2
 	packet_buff=['X','R',0,L1, R1, L2, R2, 0,'S']
 	arr = bytearray(packet_buff)

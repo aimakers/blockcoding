@@ -19,6 +19,7 @@ if(!programArg.autorun) {
 
 
 //node version check
+/*
 const nodeVersion=process.version.split('.')[0];
 let ktkws1=null;
 
@@ -28,7 +29,7 @@ if(nodeVersion==='v6'){
 } else if(nodeVersion==='v8') {
 	ktkws1=require('./ktkws_v8');
 }
-
+*/
 
 //for playing pcm sound
 const Speaker=require('speaker');
@@ -46,7 +47,8 @@ const proto_path='../data/gigagenieRPC.proto';
 
 const kwstext=['기가지니','지니야','친구야','자기야'];
 var kwsflag = 0; //=parseInt(process.argv[2]);
-
+const async = require('async')
+/*
 function initMic(){
         return record.start({
                 sampleRateHertz: 16000,
@@ -55,16 +57,17 @@ function initMic(){
                 recordProgram: 'arecord',
         })
 };
-ktkws1.initialize('../data/kwsmodel.pack');
+*/
+//ktkws1.initialize('../data/kwsmodel.pack');
 
 
 
-let mic=initMic();
+//let mic=initMic();
 var hasKey = false;
 if (fs.existsSync(json_path)) {
     // Do something
 	hasKey = true;
-	aikit.initializeJson(json_path, proto_path);
+	aikit.initializeJson(json_path,proto_path);
 }
 else{
 	// 브라우저에 알림 처리
@@ -73,6 +76,7 @@ else{
 //aikit.initialize(client_id,client_key,client_secret,cert_path,proto_path);
 
 //기본 GPIO 설정
+
 gpio.setup(29,gpio.DIR_IN,gpio.EDGE_BOTH);//버튼 핀은 입력으로
 
 gpio.on('change',function (channel,value) {
@@ -86,8 +90,37 @@ gpio.on('change',function (channel,value) {
 	io.sockets.emit("receiveData",{Type:"ktaimk_gpio_data",Data:{pin:channel,value:value}});
 });
 
-
+let ozo_timer_id = 0;
 var io = require("socket.io").listen(3001);
+
+var exec = require('child_process').exec;
+cmd = "sudo python3 ./ozo_server.py";
+exec(cmd,function(error, stdout, stderr) {
+});
+
+var device_msg_list = new Array();
+class Mutex {
+	constructor() {
+		this.lock = false; 
+	} 
+	async acquire() { 
+		while (true) { 
+			if (this.lock === false) { 
+				break; 
+			} // custom sleep (setTimeout) 
+			await sleep(100); 
+		}
+		this.lock = true;
+	} 
+	release() { 
+		this.lock = false; 
+	} 
+}
+
+var dm_buffer = new Array();
+let cnt = 0;
+const mutex = new Mutex();
+
 io.sockets.on('connection', function(socket) {
 		console.log("connect success");
 		if(hasKey == false)
@@ -114,49 +147,29 @@ io.sockets.on('connection', function(socket) {
 			    process.exit();
 			}, 1000);
 		});
-		socket.on('deviceCtlMsg',function(msg){
+		socket.on('deviceCtlMsg', async function(msg){
+			console.log("---------");
 			console.log(msg);
-			if(msg.type == "kws")
-			{
-				kwsflag = msg.data;
+			console.log("---------");
+			//await mutex.acquire();
+			msg_executor(socket, msg);
+			//mutex.release();
+			data = getUTCString()
+     		console.log(data);
+		})
+});
 
-				function setKws(){
-					ktkws1.startKws(kwsflag);
-					mode=1;
-					console.log('say :'+kwstext[kwsflag]);
-				}
-				setTimeout(setKws,100);
-			}
-			if(msg.type == "stt")
-			{
-				function setStt(){
-					mode=2;
-					startStt();
-				}
-				setTimeout(setStt,100);
-			}
-			if(msg.type == "tts")
-			{
-				var tts_str = msg.data;
-				setTimeout(function(){
-					startText2Voice(tts_str);
-				},100);
-			}
-			if(msg.type == "dss")
-			{
-				setTimeout(function(){
-					startQueryVoice();
-				},100);
-			}
-			if(msg.type == "led")
+var msg_type_list = ["led", "gpioMode", "gpioWrite",  "getDHT11_Temp", "getDHT11_Humidity", "setServo", "bh1750", "dmr", "dmstop", "dma", "setHumanoidMotion", "digitalWrite2", "analogRead", "connect", "disconnect", "move", "on_led", "off_led", "stop", "drive", "rainbow", "flashrainbow", "turnoff", "rotate", "zigzag", "play", "dance"]
+
+async function msg_executor(socket, msg){
+      		if(msg.type == "led")
 			{
 				ledType = msg.data['type'];
 				duration = msg.data['duration'];
-
+				console.log("led on")
 				var exec = require('child_process').exec;
 				cmd = "python ./ledDriver.py "+ledType+" "+duration;
 				exec(cmd,function(error, stdout, stderr) {
-
 				});
 			}
 			if(msg.type == "gpioMode")
@@ -192,6 +205,7 @@ io.sockets.on('connection', function(socket) {
 					};
 				});
 			}
+			
 			if(msg.type == "getDHT11_Temp")
 			{
 				var gpin = pin2bcm[msg.data["pin"]];
@@ -295,7 +309,6 @@ io.sockets.on('connection', function(socket) {
 			if(msg.type == "analogRead")
 			{
 				data = msg.data['data'];
-
 				var exec = require('child_process').exec;
 				cmd = "python ./analogRead.py "+data;
 				exec(cmd,function(error, stdout, stderr) {
@@ -307,28 +320,565 @@ io.sockets.on('connection', function(socket) {
 					}
 				});
 			}
-			if(msg.type == "digitalRead")
-			{
-				data = msg.data['data'];
+			//M-Ozobot
 
-				var exec = require('child_process').exec;
-				cmd = "python ./digitalRead.py "+data;
-				exec(cmd,function(error, stdout, stderr) {
-					if(!stderr){
-						socket.emit("receiveData",{Type:"ktaimk_get_digitalRead",Data:{ret:true,data:stdout}});
-					}
-					else{
-						socket.emit("receiveData",{Type:"ktaimk_get_digitalRead",Data:{ret:true,data:-1}});
-					}
-				});
+			if(msg.type == "maru_oconnect")
+			{
+				data = getUTCString()
+    			console.log(data);
+				data = msg.data['name'];
+				console.log(data);
+				command = 'maru_oconnect '
+				cmd = "python3 ./ozocommand.py "+command+" "+data;
+				result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_oconnect_wait", Data:{wait:result}});
+				console.log(result);				
 			}
-		})
-});
+			if(msg.type == "maru_odisconnect")
+			{
+				command = 'maru_odisconnect';
+				cmd = "python3 ./ozocommand.py "+ command;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_odisconnect_wait", Data:{wait:result}});
+			}
+			if(msg.type == "maru_oreadcolor")
+			{
+				//added by kt
+				command = "maru_oreadcolor ";
+				data = msg.data['color'];
+				cmd = "python3 ./ozocommand.py "+command + data;
+				ret = await execShellCommand(cmd);
+				console.log("result " + ret);
+				ret = ret.replace(/\n/g, "");
+				console.log("maru_oreadcolor_data " + ret);
+				if(ret =='True'){
+					ret = true;
+					console.log(ret);
+				}
+				else if(ret == 'False'){
+					ret = false;
+					console.log(ret);
+				}
+				socket.emit("receiveData",{Type:"maru_oreadcolor_data", Data:{color:ret}});
+				socket.emit("receiveData",{Type:"maru_oreadcolor_wait", Data:{wait:true}});			
+			}
+			if(msg.type == "maru_oobstacle")
+			{
+				//added by kt
+				command = "maru_oobstacle ";
+				data = msg.data['pos'];
+				param = data
+				console.log(param);			
+				cmd = "python3 ./ozocommand.py "+command+param;
+				ret = await execShellCommand(cmd);
+				ret = ret.replace(/\n/g, "");
+				if(ret=="False"){
+					ret = false;
+				}
+				else{
+					ret = true;
+				}
+				console.log("maru_oobstacle_data "+ret);
+				socket.emit("receiveData",{Type:"maru_oobstacle_data", Data:{obstacle:ret}});
+				socket.emit("receiveData",{Type:"maru_oobstacle_wait", Data:{wait:true}});	
+			}	
+			if(msg.type == "maru_omove1")
+			{
+				command = 'maru_omove1 ';
+				ldirection = msg.data['ldirection'];
+				lspeed = msg.data['lspeed'];
+				rdirection = msg.data['rdirection'];
+				rspeed = msg.data['rspeed'];
+				param = ldirection+' '+lspeed+' '+rdirection+' '+rspeed;
+				console.log('move1 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_omove1_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_omove1_wait", Data:{wait:result}});
+				}
+			}
+			if(msg.type == "maru_omove2")
+			{
+				command = 'maru_omove2 ';
+				direction = msg.data['direction'];
+				distance = msg.data['distance'];
+				speed = msg.data['speed'];
+				param = direction+' '+distance+' '+speed;
+				console.log('move2 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_omove2_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_omove2_wait", Data:{wait:result}});
+				}			
+			}	
+			if(msg.type == "maru_omove3")
+			{
+				command = 'maru_omove3 ';
+				distance = msg.data['distance'];
+				speed = msg.data['speed'];
+				param = distance+' '+speed;
+				console.log('move3 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_omove3_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_omove3_wait", Data:{wait:result}});
+				}							
+			}	
+			if(msg.type == "maru_orotate1")
+			{
+				command = 'maru_orotate1 ';
+				direction = msg.data['direction'];
+				degree = msg.data['degree'];
+				param = direction+' '+degree;
+				console.log('orotate1 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_orotate1_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_orotate1_wait", Data:{wait:result}});
+				}
+			}
+			if(msg.type == "maru_orotate2")
+			{
+				command = 'maru_orotate2 ';
+				direction = msg.data['direction'];
+				rotation = msg.data['rotation'];
+				param = direction+' '+rotation;
+				console.log('orotate2 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_orotate2_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_orotate2_wait", Data:{wait:result}});
+				}		
+			}			
+			if(msg.type == "maru_ostop")
+			{
+				command = "maru_ostop";
+				cmd = "python3 ./ozocommand.py "+command;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_ostop_wait", Data:{wait:result}});
+			}
+			if(msg.type == "maru_oturnoff")
+			{
+				command = "maru_oturnoff";
+				cmd = "python3 ./ozocommand.py "+command;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_oturnoff_wait", Data:{wait:result}});				
+			}	
+			if(msg.type == "maru_otopled1")
+			{
+				command = "maru_otopled1 ";
+				rgb =  msg.data['rgb'];
+				r = rgb[0]; g = rgb[1]; b = rgb[2];			
+				param = r+' '+g+' '+b;
+				console.log('otopled1 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;				
+				const result = await execShellCommand(cmd);
+				console.log(result);
+				socket.emit("receiveData",{Type:"maru_otopled1_wait", Data:{wait:result}});								
+			}					
+			if(msg.type == "maru_otopled2")
+			{
+				command = "maru_otopled2";
+				cmd = "python3 ./ozocommand.py "+command;
+				const result = await execShellCommand(cmd);
+				console.log(result);
+				socket.emit("receiveData",{Type:"maru_otopled2_wait", Data:{wait:result}});												
+			}
+			if(msg.type == "maru_otopled3")
+			{
+				command = "maru_otopled3";
+				cmd = "python3 ./ozocommand.py "+command;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_otopled3_wait", Data:{wait:result}});
+			}				
+			if(msg.type == "maru_otopledoff")
+			{
+				command = "maru_otopledoff";
+				cmd = "python3 ./ozocommand.py "+command;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_otopledoff_wait", Data:{wait:result}});				
+			}
+			if(msg.type == "maru_ofrontled1")
+			{
+				//added by kt
+				command = "maru_ofrontled1 ";
+
+				pos = msg.data['pos'];
+				led1 = msg.data['led1'];
+				led2 = msg.data['led2'];
+				led3 = msg.data['led3'];
+				led4 = msg.data['led4'];
+				led5 = msg.data['led5'];
+				//console.log(pos + ' ' + led1 + led2 + led3 + led4 + led5+ "/");
+				//pos = 0		//추가 구현 필요
+				var total_led_info = [led1, led2, led3, led4, led5];
+				if (pos == 0){
+					i=0;
+					r = total_led_info[i][0];
+					g = total_led_info[i][1];
+					b = total_led_info[i][2];
+
+					param = r+' '+g+' '+b+' '+ '1';
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+
+					r = total_led_info[i+1][0];
+					g = total_led_info[i+1][1];
+					b = total_led_info[i+1][2];
+					param = r+' '+g+' '+b+' '+ 2;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+					
+					r = total_led_info[i+2][0];
+					g = total_led_info[i+2][1];
+					b = total_led_info[i+2][2];
+					param = r+' '+g+' '+b+' '+ 3;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);	
+
+					r = total_led_info[i+3][0];
+					g = total_led_info[i+3][1];
+					b = total_led_info[i+3][2];
+					param = r+' '+g+' '+b+' '+ 4;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+					
+					r = total_led_info[i+4][0];
+					g = total_led_info[i+4][1];
+					b = total_led_info[i+4][2];
+					param = r+' '+g+' '+b+' '+ 5;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);										
+				}
+				else if(pos == 1){
+					r = total_led_info[0][0];
+					g = total_led_info[0][1];
+					b = total_led_info[0][2];
+					param = r+' '+g+' '+b+' '+ 1;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+				}
+				else if(pos == 2){
+					r = total_led_info[1][0];
+					g = total_led_info[1][1];
+					b = total_led_info[1][2];
+					param = r+' '+g+' '+b+' '+ 2; 
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+				}
+				else if(pos == 3){
+					r = total_led_info[2][0];
+					g = total_led_info[2][1];
+					b = total_led_info[2][2];
+					param = r+' '+g+' '+b+' '+ 3;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+				}
+				else if(pos == 4){
+					r = total_led_info[3][0];
+					g = total_led_info[3][1];
+					b = total_led_info[3][2];
+					param = r+' '+g+' '+b+' '+ 4;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+				}
+				else if(pos == 5){
+					r = total_led_info[4][0];
+					g = total_led_info[4][1];
+					b = total_led_info[4][2];
+					param = r+' '+g+' '+b+' '+ 5;
+					console.log('ofrontled1 ' + param);
+					cmd = "python3 ./ozocommand.py "+command+param;				
+					result = await execShellCommand(cmd);
+				}
+				socket.emit("receiveData",{Type:"maru_ofrontled1_wait", Data:{wait:result}});				
+			}	
+			if(msg.type == "maru_ofrontled2")
+			{
+				command = "maru_ofrontled2";
+				cmd = "python3 ./ozocommand.py "+command;				
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_ofrontled2_wait", Data:{wait:result}});								
+			}	
+			if(msg.type == "maru_ofrontledoff")
+			{
+				command = "maru_ofrontledoff";
+				cmd = "python3 ./ozocommand.py "+command;				
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_ofrontledoff_wait", Data:{wait:result}});					
+			}	
+			if(msg.type == "maru_oemotion")
+			{
+				var sound_list = ['happy1', 'happy2', 'happy3', 'happy4', 'happy5', 'allright1', 'allright2', 'sad1', 'sad2', 'sad3', 'sad4','surprised1', 'surprised2', 'surprised3', 'surprised4', 'surprised5', 'laugh1', 'laugh2', 'laugh3', 'laugh4', 'laugh5', 'laugh6'];
+				data = msg.data['sound'];
+				var result = null;
+				console.log(data);
+				command = 'maru_oemotion '
+				for  (var i= 0; i < sound_list.length; i++)
+				{
+					if(data == sound_list[i]){
+						console.log("oemotion " + data)
+						cmd = "python3 ./ozocommand.py "+command + data;
+						result = await execShellCommand(cmd);
+					}
+				}
+				socket.emit("receiveData",{Type:"maru_oemotion_wait", Data:{wait:result}});					
+			}	
+			if(msg.type == "maru_odirection")
+			{
+				var sound_list = ['forward','left','right','back'];
+				var result = null;
+				data = msg.data['sound'];
+				console.log(data);
+				command = 'maru_odirection '
+				for  (var i= 0; i < sound_list.length; i++)
+				{
+					if(data == sound_list[i]){
+						console.log("odirection " + data)
+						cmd = "python3 ./ozocommand.py "+command + data;
+						result = await execShellCommand(cmd);
+					}
+				}
+				socket.emit("receiveData",{Type:"maru_odirection_wait", Data:{wait:result}});					
+			}					
+			if(msg.type == "maru_onumber")
+			{
+				var sound_list = ['0','1','2','3','4','5','6','7','8','9','10'];
+				var result = null;
+				data = msg.data['sound'];
+				console.log(data);
+				command = 'maru_onumber '
+				for  (var i= 0; i < sound_list.length; i++)
+				{
+					if(data == sound_list[i]){
+						console.log("onumber " + data)
+						cmd = "python3 ./ozocommand.py "+command + data;
+						result = await execShellCommand(cmd);
+					}
+				}
+				socket.emit("receiveData",{Type:"maru_onumber_wait", Data:{wait:result}});					
+			}			
+			if(msg.type == "maru_ocolor")
+			{
+				var sound_list = ['red','green','yellow','blue','cyan','white','black'];
+				var result = null;
+				data = msg.data['sound'];
+				console.log(data);
+				command = 'maru_ocolor '
+				for  (var i= 0; i < sound_list.length; i++)
+				{
+					if(data == sound_list[i]){
+						console.log("ocolor " + data)
+						cmd = "python3 ./ozocommand.py "+command + data;
+						result = await execShellCommand(cmd);
+					}
+				}
+				socket.emit("receiveData",{Type:"maru_ocolor_wait", Data:{wait:result}});	
+			}	
+			if(msg.type == "maru_ogentone1")
+			{
+				command = 'maru_ogentone1 ';
+				octno = msg.data['octno'];
+				tone = msg.data['tone'];
+				param = octno+' '+tone;
+				console.log('ogentone1 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_ogentone1_wait", Data:{wait:result}});					
+			}
+			if(msg.type == "maru_ogentone2")
+			{
+				command = 'maru_ogentone2 ';
+				octno = msg.data['octno'];
+				tone = msg.data['tone'];
+				duration = msg.data['duration'];				
+				param = octno+' '+tone+' '+duration;
+				console.log('ogentone2 ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_ogentone2_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_ogentone2_wait", Data:{wait:result}});
+				}						
+			}
+			if(msg.type == "maru_orestnote")
+			{
+				command = 'maru_orestnote ';
+				duration = msg.data['duration'];				
+				param = duration;
+				console.log('orestnote ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_orestnote_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_orestnote_wait", Data:{wait:result}});
+				}
+			}			
+			if(msg.type == "maru_ostopsound")
+			{
+				command = "maru_ostopsound";
+				cmd = "python3 ./ozocommand.py "+command;				
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_ostopsound_wait", Data:{wait:result}});				
+			}	
+			if(msg.type == "maru_odance")
+			{
+				command = "maru_odance";
+				cmd = "python3 ./ozocommand.py "+command;				
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_odance_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_odance_wait", Data:{wait:result}});
+				}				
+				//socket.emit("receiveData",{Type:"maru_odance_wait", Data:{wait:result}});								
+			}	
+			if(msg.type == "maru_orainbow")
+			{
+				command = "maru_orainbow";
+				cmd = "python3 ./ozocommand.py "+command;				
+				const result = await execShellCommand(cmd);
+				socket.emit("receiveData",{Type:"maru_orainbow_wait", Data:{wait:result}});				
+			}				
+			if(msg.type == "maru_oflashrainbow")
+			{
+				command = 'maru_oflashrainbow ';
+				count = msg.data['count'];				
+				//param = duration;
+				//console.log('oflashrainbow ' + param);
+				cmd = "python3 ./ozocommand.py "+ command + count;				
+				//cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_oflashrainbow_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_oflashrainbow_wait", Data:{wait:result}});
+				}				
+			}	
+			if(msg.type == "maru_ozigzag")
+			{
+				command = 'maru_ozigzag ';
+				//degree = msg.data['degree'];
+				count = msg.data['count'];
+				direct = msg.data['direct'];				
+				param = count+' '+direct;
+				console.log('ozigzag ' + param);
+				cmd = "python3 ./ozocommand.py "+command+param;
+				result = await execShellCommand(cmd);
+				result = result.replace(/\n/g, "");
+				console.log('result ' + result);				
+				if(result == "waiting"){
+					console.log("Result waiting...");
+					ozo_timer_id = setInterval(function(){
+						maruo_waiting_status_check(socket, "maru_ozigzag_wait")
+					}, 1000 );
+				}
+				else{
+					socket.emit("receiveData",{Type:"maru_ozigzag_wait", Data:{wait:result}});
+				}				
+			}
+			if(msg.type == "maru_oallstop"){
+				console.log('maru_oallstop');
+				cmd = "python3 ./ozocommand.py "+ "maru_oallstop";
+				const result = await execShellCommand(cmd);
+				if(ozo_timer_id != null) {
+					console.log("All Stop Ozobot Waiting Loop...")
+		        	clearInterval(ozo_timer_id);
+		        	ozo_timer_id =null;
+		    	}		
+			}
+};
+
+ const sleep = (milliseconds) => {
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
+function resolveAfter2Seconds() {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve('resolved');
+    }, 2000);
+  });
+}
 
 let mode=0;//0:idle 1:kws, 2:stt, 3:DSS(QueryVoice)
 let ktstt=null;
 let ktqbv=null; // DSS (queryByVoice)
-
+/*
 mic.on('data',(data)=>{
 	if(mode===1){
 		result = 0;
@@ -348,6 +898,50 @@ mic.on('data',(data)=>{
 		ktqbv.write({audioContent:data});
 	}
 });
+*/
+
+function maruo_waiting_status_check(socket, ret_msg_str){
+	const { exec } = require('child_process');
+	const py = exec('python3 ./ozocommand.py maru_ocheck', (error, stdout, stderr) => {
+	  if (error || stderr) {
+	    // Handle error.
+	  } else {
+	  	ret = stdout;
+	    //console.log(stdout);
+	    console.log("time_id" + ozo_timer_id);
+	    result = ret.replace(/\n/g, "");
+	    console.log(result); 
+	    console.log();
+		if(result == 'True' || result =='False'){
+				if(ozo_timer_id != null) {
+		        	clearInterval(ozo_timer_id);
+		        	ozo_timer_id =null;
+		        	console.log("clear timer");
+		        	socket.emit("receiveData",{Type:ret_msg_str, Data:{wait:result}});
+		    	}
+		}
+		else if(result =='waiting'){
+			console.log("Still waiting.....");
+		}
+	  }
+	})
+}
+
+function getUTCString(){
+	return new Date().toISOString();
+}
+
+function execShellCommand(cmd) {
+ const exec = require('child_process').exec;
+ return new Promise((resolve, reject) => {
+ 	exec(cmd, (error, stdout, stderr) => {
+   	if (error) {
+    	console.warn(error);
+   	}
+   	resolve(stdout? stdout : stderr);
+  	});
+ 	});
+}
 
 function playWav(wavData,cb = null){
 	var wavReader = new wav.Reader();
